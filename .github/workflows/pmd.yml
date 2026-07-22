@@ -1,32 +1,72 @@
-name: PMD Rainfall Downloader
+name: PMD Daily Rainfall Downloader
 
 on:
   schedule:
-    - cron: "0 11 * * *"   # Runs daily at 6 AM UTC
-  workflow_dispatch:       # Allow manual runs
+    # 11:00 AM UTC, every day
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+    inputs:
+      days_back:
+        description: 'How many days back to probe (manual backfill runs only)'
+        required: false
+        default: '1'
+
+# Prevent two runs from racing to commit/push at the same time.
+concurrency:
+  group: pmd-rainfall-downloader
+  cancel-in-progress: false
+
+permissions:
+  contents: write
 
 jobs:
-  download:
+  download-and-commit:
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+    timeout-minutes: 15
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pmd_rainfall_downloader.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
       - name: Install dependencies
-        run: pip install requests PyPDF2
-
-      - name: Run downloader
-        run: python pmd_rainfall_downloader.py
-
-      - name: Commit results
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add .
-          git commit -m "Update PMD rainfall reports"
-          git push
+          python -m pip install --upgrade pip
+          pip install requests PyPDF2 beautifulsoup4
+
+      - name: Run PMD rainfall downloader
+        env:
+          # workflow_dispatch inputs are always strings and only present on
+          # manual runs; scheduled runs fall back to a single day.
+          DAYS_BACK: ${{ github.event.inputs.days_back || '1' }}
+        run: |
+          python pmd_rainfall_downloader.py --days-back "$DAYS_BACK"
+
+      - name: Commit and push new rainfall data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add pmd_rainfall_pdfs/
+
+          if git diff --cached --quiet; then
+            echo "No new or changed rainfall files — nothing to commit."
+          else
+            git commit -m "Add PMD rainfall report(s) for $(date -u +'%Y-%m-%d') [skip ci]"
+            git pull --rebase origin "${GITHUB_REF_NAME}"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi
