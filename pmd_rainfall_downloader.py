@@ -26,6 +26,8 @@ from urllib.parse import urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
+from pmd_rainfall_parser import sync_pdfs_to_db
+
 # --------------------------------------------------------------------------
 # Configuration
 # --------------------------------------------------------------------------
@@ -35,6 +37,7 @@ LISTING_URL = f"{BASE_URL}/nwfc/daily-rainfall"
 FALLBACK_URL_TEMPLATE = f"{BASE_URL}/storage/uploads/nwfc/daily_rainfall/pdf/{{date}}.pdf"
 
 DEFAULT_DOWNLOAD_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "pmd_rainfall_pdfs")
+DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "rainfall.db")
 REQUEST_TIMEOUT = 20
 CHUNK_SIZE = 8192
 DEFAULT_DAYS_BACK = 7  # matches the dashboard's 24hr–7day coverage window
@@ -308,6 +311,12 @@ def main():
     parser.add_argument("--out", default=DEFAULT_DOWNLOAD_DIR, help="Directory to save PDFs into.")
     parser.add_argument("--days-back", type=int, default=DEFAULT_DAYS_BACK,
                          help="How many days back to probe via the fallback URL pattern (default: 7).")
+    parser.add_argument("--db", default=DEFAULT_DB_PATH,
+                         help="Path to the SQLite database that stores parsed rainfall readings.")
+    parser.add_argument("--skip-db", action="store_true",
+                         help="Download PDFs only — don't parse them into the database.")
+    parser.add_argument("--rebuild-db", action="store_true",
+                         help="Reparse every PDF in --out, even dates already present in the database.")
     args = parser.parse_args()
 
     downloader = PMDRainfallDownloader(download_dir=args.out)
@@ -318,6 +327,17 @@ def main():
         print("Downloaded files:")
         for f in result.downloaded:
             print(f"  - {f}")
+
+    if not args.skip_db:
+        updated_dates = sync_pdfs_to_db(
+            pdf_dir=args.out, db_path=args.db,
+            logger=downloader.log, force=args.rebuild_db,
+        )
+        print(f"\nDatabase sync: {len(updated_dates)} date(s) (re)parsed into {args.db}")
+        if updated_dates:
+            print("Updated dates:")
+            for d in updated_dates:
+                print(f"  - {d}")
 
 
 if __name__ == "__main__":
