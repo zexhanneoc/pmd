@@ -2,6 +2,9 @@ name: PMD Daily Rainfall Downloader
 
 on:
   schedule:
+   schedule:
+    # 9:00 AM UTC, every day
+    - cron: '0 9 * * *'
     # 11:00 AM UTC, every day
     - cron: '0 11 * * *'
   workflow_dispatch:
