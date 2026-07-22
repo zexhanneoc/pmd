@@ -1,0 +1,11 @@
+2026-07-22 10:39:02,429 [INFO] Found 7 PDF link(s) on listing page.
+2026-07-22 10:39:02,782 [INFO] Downloaded: 2026-07-22.pdf  <-  https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/22-07-2026.pdf
+2026-07-22 10:39:03,126 [INFO] Downloaded: 2026-07-21.pdf  <-  https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/21-07-2026.pdf
+2026-07-22 10:39:03,393 [INFO] Downloaded: 2026-07-20.pdf  <-  https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/20-07-2026.pdf
+2026-07-22 10:39:04,044 [INFO] Downloaded: 2026-07-19.pdf  <-  https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/19-07-2026.pdf
+2026-07-22 10:39:04,308 [INFO] Downloaded: 2026-07-18.pdf  <-  https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/18-07-2026.pdf
+2026-07-22 10:39:04,427 [INFO] Skipped (already exists): 2026-07-22.pdf
+2026-07-22 10:39:05,014 [INFO] Downloaded: 2026-07-16.pdf  <-  https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/16-07-2026.pdf
+2026-07-22 10:39:05,015 [INFO] No listing link for 2026-07-17, probing fallback: https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/17-07-2026.pdf
+2026-07-22 10:39:05,722 [INFO] No valid report found for 2026-07-17.
+2026-07-22 10:39:05,722 [INFO] Run complete. Downloaded: 6, Skipped: 1, Failed: 0
