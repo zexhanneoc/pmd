@@ -9,7 +9,7 @@ on:
     - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
-      days_back:cd
+      days_back:
         description: 'How many days back to probe (manual backfill runs only)'
         required: false
         default: '1'
