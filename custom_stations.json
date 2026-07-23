@@ -28,5 +28,75 @@
     "name": "Rohri",
     "lat": 27.67,
     "lon": 68.9
+  },
+  {
+    "name": "Mamad Gut",
+    "lat": 34.5647,
+    "lon": 71.3478
+  },
+  {
+    "name": "Layyah R",
+    "lat": 30.9646,
+    "lon": 70.9444
+  },
+  {
+    "name": "Mohenjo Daro",
+    "lat": 27.33,
+    "lon": 68.23
+  },
+  {
+    "name": "Padidan",
+    "lat": 26.85,
+    "lon": 68.1333
+  },
+  {
+    "name": "Khairpur",
+    "lat": 27.5333,
+    "lon": 68.75
+  },
+  {
+    "name": "Hajira",
+    "lat": 33.7739,
+    "lon": 73.8944
+  },
+  {
+    "name": "Brarkot",
+    "lat": 34.3411,
+    "lon": 73.4117
+  },
+  {
+    "name": "T T Singh",
+    "lat": 30.9415,
+    "lon": 72.535
+  },
+  {
+    "name": "D.I. Khan (City",
+    "lat": 31.8167,
+    "lon": 70.9333
+  },
+  {
+    "name": "R Y Khan",
+    "lat": 28.4195,
+    "lon": 70.2989
+  },
+  {
+    "name": "Turbat",
+    "lat": 26.0,
+    "lon": 63.0333
+  },
+  {
+    "name": "Pashat Bajaur",
+    "lat": 34.867,
+    "lon": 71.533
+  },
+  {
+    "name": "Dera Ismail Khan (Airport)",
+    "lat": 31.8167,
+    "lon": 70.933
+  },
+  {
+    "name": "Chaklala-",
+    "lat": 33.6167,
+    "lon": 73.1
   }
 ]
