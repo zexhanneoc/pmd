@@ -4,32 +4,69 @@ pmd_rainfall_parser.py
 Parses a single PMD Daily Rainfall Report PDF into structured station
 readings, and stores them date-by-date in a SQLite database (rainfall.db).
 
-This is a server-side Python port of the parsing logic already used by the
-dashboard's client-side pdf.js code, so a station/value extracted here will
-match what the dashboard would have computed by parsing the same PDF in the
-browser. The port mirrors, on purpose:
-  - column splitting by x-position (Stations column vs Rainfall(mm) column)
-  - region header detection (SINDH, PUNJAB, etc.)
-  - "Trace" -> 1mm, "NIL" -> 0mm
-  - grouped sub-station breakdowns (e.g. "Sialkot Airport 95, City 44")
-    collapsing to ONE reading for the primary station, using the MAXIMUM
-    value in the group
-  - multiple station names sharing one simple value on a row
-  - stopping at the first non-rainfall section (Maximum Wind Reported,
-    Water Level, Flood Situation, etc.)
+Row-building logic (rewritten to fix three real bugs found against actual
+PMD PDFs):
 
-Real PMD PDFs occasionally contain messy free-text asides (e.g. a WASA
-sub-station breakdown wrapped across several lines with no clean column
-alignment). The heuristics below handle the vast majority of rows cleanly;
-a few odd lines may fail to match any known station and are silently
-skipped (recorded in `unmatched` for logging only) — the same behavior as
-the existing browser-side parser on the same PDFs.
+  1. Station-vs-value classification is no longer based on one fixed pixel
+     boundary. Every word is classified by BOTH its column position (a
+     word left of ~x=250 is candidate station-name text; the PMD layout
+     never puts real station names further right than that) AND its
+     shape (anything matching \\d+/Trace/NIL is a value regardless of
+     column) — so a 3-digit reading like "252" is never swept into the
+     station name just because it sits a few pixels left of the nominal
+     column boundary.
+
+  2. A row's value can appear on its own physical PDF line, either before
+     or after the line(s) that carry the station name/list — this happens
+     whenever a station list is long enough to wrap, or a station name's
+     own line happens to coincide vertically with an unrelated aside
+     (real example: PMD's "Rain by WASA: (...)" breakdown for Lahore
+     pushed the word "Lahore" itself down onto the same visual line as
+     the WASA aside text, several lines below its own "Airport 252, City
+     84" value — a naive top-to-bottom column split drops the 252 entirely
+     because there's no station name yet when the value line is reached).
+     Each row is tracked as an open "pending" entry that keeps absorbing
+     value-only lines (no left-column text) and un-named text until
+     something resolves it: either a station name arrives to name it, or
+     a genuinely new station starts and the pending row is closed out.
+
+  3. Multiple station names sharing one simple value (comma-joined,
+     "and"-joined, or "&"-joined — e.g. "Hunza & Babusar 03" or a wrapped
+     "Mandi Bahuddin, Layyah, Sheikhupura, Faisalabad, Jhelum, Bhakkar 02")
+     are split into one reading per station, each getting that same value,
+     rather than being treated as a single garbled station name.
+
+Station name matching tolerates minor spelling drift (e.g. "Bahuddin" vs
+the lookup's "Bahauddin") via a fuzzy fallback, and a station name can be
+recovered even when embedded inside a noisier line.
+
+If a station genuinely isn't recognized (new station PMD started
+reporting, or a name too garbled to match), this script does NOT just
+silently drop it:
+  - When run in a terminal (interactive), it asks you for that station's
+    lat/lon on the spot, adds it to custom_stations.json (loaded on every
+    future run, merged into the built-in lookup) and includes the
+    reading in this run's results.
+  - When run non-interactively (e.g. a GitHub Action), it can't prompt,
+    so instead every unmatched reading is recorded in the
+    'unresolved_stations' table so nothing is lost — run this script
+    locally with --resolve-unmatched to fill in coordinates for whatever
+    accumulated there, or check --out for a same-day unresolved_stations
+    JSON.
+
+This is a server-side Python port of the parsing logic used by the
+dashboard's client-side PDF parser, so a station/value extracted here
+should match what the dashboard would compute parsing the same PDF in
+the browser.
 """
 
+import argparse
+import difflib
 import json
 import os
 import re
 import sqlite3
+import sys
 from contextlib import closing
 from datetime import datetime, timezone
 
@@ -37,6 +74,9 @@ import pdfplumber
 
 # --------------------------------------------------------------------------
 # Station lookup — kept in sync with STATIONS_LOOKUP in the dashboard HTML.
+# Extended at runtime with any entries from custom_stations.json (stations
+# either supplied interactively or added by hand after a --resolve-unmatched
+# run).
 # --------------------------------------------------------------------------
 
 STATIONS_LOOKUP = [
@@ -145,13 +185,62 @@ REGION_HEADERS = {
     "GILGIT BALTISTAN", "BALOCHISTAN",
 }
 
-SIMPLE_VALUE_RE = re.compile(r"^\(?\s*(\d{1,3}(?:\.\d+)?|Trace|NIL)\s*\)?$", re.I)
-SUB_PAIR_RE = re.compile(r"([A-Za-z][A-Za-z .'/\-]*?)\s+(\d{1,3}(?:\.\d+)?|Trace|NIL)\b", re.I)
-LEAD_VALUE_RE = re.compile(r"^(\d{1,3}(?:\.\d+)?|Trace|NIL)\b", re.I)
+# PMD spells/abbreviates some station names inconsistently across bulletins
+# (e.g. sometimes the full district name, sometimes a short form). Mapped
+# to the canonical STATIONS_LOOKUP name so both resolve to the same entry.
+NAME_ALIASES = {
+    "pattan": "pathan kohistan",
+    "dera ismail khan": "d i khan",
+    "dera ghazi khan": "d g khan",
+}
+
+# A word is a "value word" if it matches this, regardless of which column
+# it visually sits in.
+VALUE_TOKEN_RE = re.compile(r"^\(?\d{1,3}(?:\.\d+)?\)?,?$|^\(?Trace\)?,?$|^\(?NIL\)?,?$", re.I)
+# Real PMD station names never render further right than this; anything
+# left of it that isn't itself a value token is candidate station text.
+STATION_ZONE_MAX_X = 250
+
+# Used at the end to pull every numeric reading out of a (possibly noisy,
+# possibly WASA-aside-polluted) value blob and take the max — this is
+# deliberately permissive since PMD sub-breakdowns (Airport/City, WASA
+# zone lists, etc.) are always finer-grained readings that shouldn't
+# exceed the station's own headline number.
+NUMBER_IN_TEXT_RE = re.compile(r"\(?(\d{1,3}(?:\.\d+)?)\)?|\bTrace\b|\bNIL\b", re.I)
+
 STOP_RE = re.compile(
     r"Maximum\s+Wind|Wind\s*\(\s*KT\s*\)|Water\s+Level|Nullah\s+Lai|Flood\s+Situation", re.I
 )
 DATE_RE = re.compile(r"(\d{2}-\d{2}-\d{4})")
+
+FUZZY_MATCH_THRESHOLD = 0.82
+
+CUSTOM_STATIONS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "custom_stations.json")
+
+
+def load_custom_stations(path=CUSTOM_STATIONS_PATH):
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, list) else []
+    except (json.JSONDecodeError, OSError):
+        return []
+
+
+def save_custom_station(entry, path=CUSTOM_STATIONS_PATH):
+    stations = load_custom_stations(path)
+    stations = [s for s in stations if s["name"].strip().lower() != entry["name"].strip().lower()]
+    stations.append(entry)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(stations, f, indent=2, ensure_ascii=False)
+
+
+def build_lookup():
+    lookup = list(STATIONS_LOOKUP)
+    lookup.extend(load_custom_stations())
+    return lookup
 
 
 def token_to_mm(tok):
@@ -166,6 +255,19 @@ def token_to_mm(tok):
         return None
 
 
+def extract_all_values(value_text):
+    """Pulls every numeric/Trace/NIL token out of a value blob (which may
+    contain sub-labels like 'Airport'/'City', or unrelated aside numbers
+    that got swept in) and returns them all as floats."""
+    vals = []
+    for m in NUMBER_IN_TEXT_RE.finditer(value_text):
+        raw = m.group(0)
+        v = token_to_mm(re.sub(r"[()]", "", raw))
+        if v is not None:
+            vals.append(v)
+    return vals
+
+
 def normalize_name(s):
     s = s.lower()
     s = re.sub(r"[().&']", "", s)
@@ -173,17 +275,50 @@ def normalize_name(s):
     return s
 
 
-def find_station(raw_name):
+def find_station(raw_name, lookup):
     n = normalize_name(raw_name)
     if not n:
         return None
-    for s in STATIONS_LOOKUP:
+
+    # Tier 0: known naming-variant alias.
+    if n in NAME_ALIASES:
+        target = NAME_ALIASES[n]
+        for s in lookup:
+            if normalize_name(s["name"]) == target:
+                return s
+
+    # Tier 1: exact normalized match.
+    for s in lookup:
         if normalize_name(s["name"]) == n:
             return s
-    for s in STATIONS_LOOKUP:
+
+    # Tier 2: substring containment either way (recovers a known name
+    # embedded inside a noisier/garbled line).
+    for s in lookup:
         sn = normalize_name(s["name"])
         if sn and (sn in n or n in sn):
             return s
+
+    # Tier 3: fuzzy match on the whole string (tolerates spelling drift,
+    # e.g. "Bahuddin" vs "Bahauddin").
+    names = [normalize_name(s["name"]) for s in lookup]
+    close = difflib.get_close_matches(n, names, n=1, cutoff=FUZZY_MATCH_THRESHOLD)
+    if close:
+        for s in lookup:
+            if normalize_name(s["name"]) == close[0]:
+                return s
+
+    # Tier 4: try shrinking word-by-word from the front/back, in case a
+    # known name is a prefix/suffix of a longer noisy phrase that tiers
+    # 2-3 didn't already catch (e.g. leftover trailing punctuation words).
+    words = n.split()
+    for length in range(len(words) - 1, 0, -1):
+        for start in range(0, len(words) - length + 1):
+            candidate = " ".join(words[start:start + length])
+            for s in lookup:
+                if normalize_name(s["name"]) == candidate:
+                    return s
+
     return None
 
 
@@ -213,118 +348,154 @@ def extract_lines(pdf_path):
     return lines
 
 
-def find_column_split_x(lines):
-    for line in lines:
-        text = " ".join(w["text"] for w in line["items"])
-        if re.search(r"Stations", text, re.I) and re.search(r"Rainfall", text, re.I):
-            for w in line["items"]:
-                if re.search(r"Rainfall", w["text"], re.I):
-                    return w["x0"] - 10  # slightly wider buffer than the
-                    # browser parser's -5 to absorb the sub-label jitter
-                    # seen on real PDFs (e.g. "Airport"/"ZP" landing a few
-                    # px left of the header's x-position on some rows).
-    return 300
+def classify_line(items):
+    """Splits a line's words into (station_text, value_text). A word is a
+    value if it matches VALUE_TOKEN_RE (regardless of column) OR sits at
+    or past STATION_ZONE_MAX_X; otherwise, if it's left of that column,
+    it's station text."""
+    station_words, value_words = [], []
+    for w in items:
+        if VALUE_TOKEN_RE.match(w["text"]) or w["x0"] >= STATION_ZONE_MAX_X:
+            value_words.append(w)
+        else:
+            station_words.append(w)
+    station_text = re.sub(r"\s+", " ", " ".join(w["text"] for w in station_words)).strip()
+    value_text = re.sub(r"\s+", " ", " ".join(w["text"] for w in value_words)).strip()
+    return station_text, value_text
 
 
-def parse_pdf(pdf_path):
-    """Returns (date_label, stations, unmatched) — same shape as the
-    dashboard's client-side parseBulletin()."""
-    lines = extract_lines(pdf_path)
-    full_text = "\n".join(" ".join(w["text"] for w in l["items"]) for l in lines)
-    dm = DATE_RE.search(full_text)
-    date_label = dm.group(1) if dm else None
+def _is_dangling(station_text):
+    """True if a station-name fragment looks like an incomplete
+    comma/&/and-joined list that continues on the next line."""
+    t = station_text.rstrip()
+    if t.endswith((",", "&")):
+        return True
+    if re.search(r"\band\b\s*$", t, re.I):
+        return True
+    return False
 
-    split_x = find_column_split_x(lines)
 
+def build_rows(lines):
+    """Row-builder: tracks one 'pending' row at a time. A value-only line
+    with nothing open yet starts a nameless pending row (awaiting_name);
+    a station-name line names it. A station-name line ending in a
+    trailing separator (dangling) keeps the row open so a wrapped list
+    can continue naming it across further lines. Region headers and the
+    stop marker flush whatever's pending."""
     rows = []
+    pending = None
     current_region = "Unspecified"
     saw_region = False
+
+    def flush():
+        nonlocal pending
+        if pending is not None:
+            rows.append(pending)
+            pending = None
+
     for line in lines:
-        text = " ".join(w["text"] for w in line["items"])
-        text = re.sub(r"\s+", " ", text).strip()
-        if not text:
+        raw_text = " ".join(w["text"] for w in line["items"])
+        raw_text = re.sub(r"\s+", " ", raw_text).strip()
+        if not raw_text:
             continue
-        upper = text.upper()
+
+        upper = raw_text.upper()
         if upper in REGION_HEADERS:
+            flush()
             current_region = upper
             saw_region = True
             continue
         if not saw_region:
             continue
-        if re.match(r"^Stations\s+Rainfall", text, re.I):
+        if re.match(r"^Stations\s+Rainfall", raw_text, re.I):
             continue
-        if STOP_RE.search(text):
+        if re.search(r"Total\s+Rainfall\s*\(mm\)|\bPST\b", raw_text, re.I):
+            continue
+        if STOP_RE.search(raw_text):
             break
 
-        station = " ".join(w["text"] for w in line["items"] if w["x0"] < split_x)
-        station = re.sub(r"\s+", " ", station).strip()
-        value = " ".join(w["text"] for w in line["items"] if w["x0"] >= split_x)
-        value = re.sub(r"\s+", " ", value).strip()
-        if not station and not value:
+        station_text, value_text = classify_line(line["items"])
+        if not station_text and not value_text:
             continue
 
-        if not station and value and rows:
-            rows[-1]["value"] += " " + value
-        elif station:
-            rows.append({"region": current_region, "station": station, "value": value})
+        if station_text:
+            if pending is not None and (pending["awaiting_name"] or pending["dangling"]):
+                pending["station"] = (pending["station"] + " " + station_text).strip() \
+                    if pending["station"] else station_text
+                pending["awaiting_name"] = False
+                pending["dangling"] = _is_dangling(station_text)
+                if value_text:
+                    pending["value"] = (pending["value"] + " " + value_text).strip() \
+                        if pending["value"] else value_text
+            else:
+                flush()
+                pending = {
+                    "region": current_region, "station": station_text, "value": value_text,
+                    "awaiting_name": False, "dangling": _is_dangling(station_text),
+                }
+        else:
+            if value_text:
+                if pending is not None:
+                    pending["value"] = (pending["value"] + " " + value_text).strip() \
+                        if pending["value"] else value_text
+                else:
+                    pending = {
+                        "region": current_region, "station": "", "value": value_text,
+                        "awaiting_name": True, "dangling": False,
+                    }
+
+    flush()
+    return rows
+
+
+def parse_pdf(pdf_path, lookup=None, interactive=False):
+    """Returns (date_label, stations, unmatched). If interactive=True and
+    a station can't be matched, prompts on the terminal for its lat/lon
+    and persists it to custom_stations.json for future runs."""
+    if lookup is None:
+        lookup = build_lookup()
+
+    lines = extract_lines(pdf_path)
+    full_text = "\n".join(" ".join(w["text"] for w in l["items"]) for l in lines)
+    dm = DATE_RE.search(full_text)
+    date_label = dm.group(1) if dm else None
+
+    rows = build_rows(lines)
 
     results = []
     unmatched = []
+    prompted_this_run = {}  # name -> station dict, so we only ask once per run
 
     for row in rows:
         region_name = row["region"].title()
-        value_text = row["value"].strip()
         station_text = row["station"].strip()
+        value_text = row["value"].strip()
         if not station_text:
             continue
 
-        looks_like_list = bool(re.search(r",| and ", station_text, re.I))
-        if looks_like_list and SIMPLE_VALUE_RE.match(value_text):
-            mm = token_to_mm(re.sub(r"[()]", "", value_text).strip())
-            if mm is None:
-                continue
-            for name_raw in re.split(r",| and ", station_text, flags=re.I):
+        looks_like_list = bool(re.search(r",|\band\b|&", station_text, re.I))
+        vals = extract_all_values(value_text)
+
+        if looks_like_list and len(vals) >= 1:
+            mm = max(vals)
+            for name_raw in re.split(r",|\s+and\s+|\s*&\s*", station_text, flags=re.I):
                 name_raw = name_raw.strip()
                 if not name_raw:
                     continue
-                station = find_station(name_raw)
+                station = _resolve_station(name_raw, lookup, mm, region_name, unmatched,
+                                            prompted_this_run, interactive)
                 if station:
-                    results.append({"name": station["name"], "lat": station["lat"],
-                                     "lon": station["lon"], "mm": mm, "region": region_name,
-                                     "note": None})
-                else:
-                    unmatched.append({"name": name_raw, "mm": mm, "region": region_name})
+                    results.append(station)
             continue
 
-        sub_pairs = []
-        for m in SUB_PAIR_RE.finditer(value_text):
-            v = token_to_mm(m.group(2))
-            if v is not None:
-                sub_pairs.append(v)
-
-        mm = None
-        note = None
-        if sub_pairs:
-            mm = max(sub_pairs)
-            if len(sub_pairs) > 1:
-                note = value_text
-        elif SIMPLE_VALUE_RE.match(value_text):
-            mm = token_to_mm(re.sub(r"[()]", "", value_text).strip())
-        else:
-            lead = LEAD_VALUE_RE.match(value_text)
-            if lead:
-                mm = token_to_mm(lead.group(1))
-
-        if mm is None:
+        if not vals:
             continue
-
-        station = find_station(station_text)
+        mm = max(vals)
+        note = value_text if len(vals) > 1 else None
+        station = _resolve_station(station_text, lookup, mm, region_name, unmatched,
+                                    prompted_this_run, interactive, note=note)
         if station:
-            results.append({"name": station["name"], "lat": station["lat"],
-                             "lon": station["lon"], "mm": mm, "region": region_name,
-                             "note": note})
-        else:
-            unmatched.append({"name": station_text, "mm": mm, "region": region_name})
+            results.append(station)
 
     # One reading per station per region — keep the max if a station repeats.
     seen = {}
@@ -334,6 +505,49 @@ def parse_pdf(pdf_path):
             seen[key] = r
 
     return date_label, list(seen.values()), unmatched
+
+
+def _resolve_station(name_raw, lookup, mm, region_name, unmatched, prompted_this_run, interactive, note=None):
+    station = find_station(name_raw, lookup)
+    if station:
+        return {"name": station["name"], "lat": station["lat"], "lon": station["lon"],
+                "mm": mm, "region": region_name, "note": note}
+
+    key = normalize_name(name_raw)
+    if key in prompted_this_run:
+        added = prompted_this_run[key]
+        if added is None:
+            unmatched.append({"name": name_raw, "mm": mm, "region": region_name})
+            return None
+        return {"name": added["name"], "lat": added["lat"], "lon": added["lon"],
+                "mm": mm, "region": region_name, "note": note}
+
+    if interactive:
+        added = _prompt_for_station(name_raw, mm, region_name)
+        prompted_this_run[key] = added
+        if added:
+            lookup.append(added)
+            save_custom_station(added)
+            return {"name": added["name"], "lat": added["lat"], "lon": added["lon"],
+                    "mm": mm, "region": region_name, "note": note}
+
+    prompted_this_run[key] = None
+    unmatched.append({"name": name_raw, "mm": mm, "region": region_name})
+    return None
+
+
+def _prompt_for_station(name_raw, mm, region_name):
+    print(f"\n[unresolved station] '{name_raw}' ({region_name}, {mm}mm) is not in the station lookup.")
+    resp = input("  Enter 'lat,lon' to add it (or press Enter to skip): ").strip()
+    if not resp:
+        return None
+    try:
+        lat_str, lon_str = [p.strip() for p in resp.split(",", 1)]
+        lat, lon = float(lat_str), float(lon_str)
+    except (ValueError, IndexError):
+        print("  Couldn't parse that as 'lat,lon' — skipping.")
+        return None
+    return {"name": name_raw.strip(), "lat": lat, "lon": lon}
 
 
 # --------------------------------------------------------------------------
@@ -359,6 +573,16 @@ CREATE TABLE IF NOT EXISTS readings (
     FOREIGN KEY (date) REFERENCES reports(date)
 );
 
+CREATE TABLE IF NOT EXISTS unresolved_stations (
+    date TEXT NOT NULL,
+    name TEXT NOT NULL,
+    region TEXT,
+    mm REAL,
+    first_seen TEXT NOT NULL,
+    resolved INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (date, name)
+);
+
 CREATE INDEX IF NOT EXISTS idx_readings_station ON readings(station);
 CREATE INDEX IF NOT EXISTS idx_readings_date ON readings(date);
 """
@@ -376,7 +600,7 @@ def date_already_parsed(conn, iso_date):
     return cur.fetchone() is not None
 
 
-def upsert_date(conn, iso_date, date_label, stations):
+def upsert_date(conn, iso_date, date_label, stations, unmatched):
     with closing(conn.cursor()) as cur:
         cur.execute(
             "INSERT INTO reports(date, label, fetched_at) VALUES (?, ?, ?) "
@@ -392,14 +616,23 @@ def upsert_date(conn, iso_date, date_label, stations):
                 for s in stations
             ],
         )
+        cur.execute("DELETE FROM unresolved_stations WHERE date = ?", (iso_date,))
+        if unmatched:
+            now = datetime.now(timezone.utc).isoformat()
+            cur.executemany(
+                "INSERT INTO unresolved_stations(date, name, region, mm, first_seen, resolved) "
+                "VALUES (?, ?, ?, ?, ?, 0)",
+                [(iso_date, u["name"], u["region"], u["mm"], now) for u in unmatched],
+            )
     conn.commit()
 
 
-def sync_pdfs_to_db(pdf_dir, db_path, logger=None, force=False):
+def sync_pdfs_to_db(pdf_dir, db_path, logger=None, force=False, interactive=False):
     """Parses every PDF in pdf_dir whose date isn't already in the DB (or
     all of them if force=True) and upserts the results. Returns the list
     of ISO dates that were (re)parsed."""
     conn = init_db(db_path)
+    lookup = build_lookup()
     updated = []
     try:
         for fname in sorted(os.listdir(pdf_dir)):
@@ -412,13 +645,13 @@ def sync_pdfs_to_db(pdf_dir, db_path, logger=None, force=False):
                 continue
             pdf_path = os.path.join(pdf_dir, fname)
             try:
-                date_label, stations, unmatched = parse_pdf(pdf_path)
-                upsert_date(conn, iso_date, date_label, stations)
+                date_label, stations, unmatched = parse_pdf(pdf_path, lookup=lookup, interactive=interactive)
+                upsert_date(conn, iso_date, date_label, stations, unmatched)
                 updated.append(iso_date)
                 if logger:
                     msg = f"Parsed {fname}: {len(stations)} station reading(s)"
                     if unmatched:
-                        msg += f", {len(unmatched)} unmatched name(s) skipped"
+                        msg += f", {len(unmatched)} unmatched name(s) saved to unresolved_stations"
                     logger.info(msg)
             except Exception as e:  # noqa: BLE001 - one bad PDF shouldn't kill the run
                 if logger:
@@ -428,17 +661,51 @@ def sync_pdfs_to_db(pdf_dir, db_path, logger=None, force=False):
     return updated
 
 
+def resolve_unmatched(db_path, pdf_dir, logger=None):
+    """Interactive helper: walks every distinct unresolved station name
+    still in the DB, prompts for lat/lon, and (if provided) saves it to
+    custom_stations.json. Doesn't reparse automatically — run
+    sync_pdfs_to_db(..., force=True) afterwards to pick the fix up."""
+    conn = init_db(db_path)
+    try:
+        rows = conn.execute(
+            "SELECT DISTINCT name, region, mm FROM unresolved_stations WHERE resolved = 0 ORDER BY name"
+        ).fetchall()
+        if not rows:
+            print("No unresolved stations.")
+            return
+        print(f"{len(rows)} unresolved station name(s) found.\n")
+        for name, region, mm in rows:
+            added = _prompt_for_station(name, mm, region)
+            if added:
+                save_custom_station(added)
+                conn.execute("UPDATE unresolved_stations SET resolved = 1 WHERE name = ?", (name,))
+                conn.commit()
+                print(f"  Saved. Re-run with --force to reparse affected dates.")
+    finally:
+        conn.close()
+
+
 if __name__ == "__main__":
-    import argparse
     ap = argparse.ArgumentParser(description="Parse PMD rainfall PDFs into rainfall.db")
     ap.add_argument("--pdf-dir", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "pmd_rainfall_pdfs"))
     ap.add_argument("--db", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "rainfall.db"))
     ap.add_argument("--force", action="store_true", help="Reparse every PDF, even already-synced dates")
+    ap.add_argument("--interactive", action="store_true",
+                     help="Prompt for lat/lon of unmatched stations as they're found (default: on if run in a terminal, off in CI)")
+    ap.add_argument("--no-prompt", action="store_true", help="Never prompt, even in a terminal")
+    ap.add_argument("--resolve-unmatched", action="store_true",
+                     help="Instead of parsing, walk unresolved_stations in the DB and prompt for each")
     args = ap.parse_args()
 
     import logging
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     log = logging.getLogger("pmd_parser")
 
-    updated = sync_pdfs_to_db(args.pdf_dir, args.db, logger=log, force=args.force)
+    if args.resolve_unmatched:
+        resolve_unmatched(args.db, args.pdf_dir, logger=log)
+        sys.exit(0)
+
+    interactive = args.interactive or (sys.stdin.isatty() and not args.no_prompt)
+    updated = sync_pdfs_to_db(args.pdf_dir, args.db, logger=log, force=args.force, interactive=interactive)
     print(f"\nSynced {len(updated)} date(s) into {args.db}")
