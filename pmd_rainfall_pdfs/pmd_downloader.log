@@ -21,3 +21,14 @@
 2026-07-23 10:17:45,393 [INFO] No valid report found for 2026-07-17.
 2026-07-23 10:17:45,393 [INFO] Run complete. Downloaded: 1, Skipped: 6, Failed: 0
 2026-07-23 10:17:45,578 [INFO] Parsed 2026-07-23.pdf: 47 station reading(s), 10 unmatched name(s) skipped
+2026-07-23 11:35:14,424 [INFO] Found 7 PDF link(s) on listing page.
+2026-07-23 11:35:18,168 [INFO] Skipped (already exists): 2026-07-23.pdf
+2026-07-23 11:35:18,479 [INFO] Skipped (already exists): 2026-07-22.pdf
+2026-07-23 11:35:18,763 [INFO] Skipped (already exists): 2026-07-21.pdf
+2026-07-23 11:35:19,061 [INFO] Skipped (already exists): 2026-07-20.pdf
+2026-07-23 11:35:19,360 [INFO] Skipped (already exists): 2026-07-19.pdf
+2026-07-23 11:35:20,920 [INFO] Skipped (already exists): 2026-07-18.pdf
+2026-07-23 11:35:25,786 [INFO] Skipped (already exists): 2026-07-23.pdf
+2026-07-23 11:35:25,786 [INFO] No listing link for 2026-07-17, probing fallback: https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/17-07-2026.pdf
+2026-07-23 11:35:26,883 [INFO] No valid report found for 2026-07-17.
+2026-07-23 11:35:26,883 [INFO] Run complete. Downloaded: 0, Skipped: 7, Failed: 0
