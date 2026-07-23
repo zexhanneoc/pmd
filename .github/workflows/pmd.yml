@@ -52,8 +52,6 @@ jobs:
 
       - name: Run PMD rainfall downloader
         env:
-          # workflow_dispatch inputs are always strings and only present on
-          # manual runs; scheduled runs fall back to a single day.
           DAYS_BACK: ${{ github.event.inputs.days_back || '1' }}
         run: |
           python pmd_rainfall_downloader.py --days-back "$DAYS_BACK"
@@ -62,13 +60,23 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
+          
+          # First, stash any local changes
+          git stash --include-untracked || true
+          
+          # Pull latest changes from remote
+          git pull --rebase origin "${GITHUB_REF_NAME}" || git pull origin "${GITHUB_REF_NAME}"
+          
+          # Pop stashed changes
+          git stash pop || true
+          
+          # Add the new files
           git add pmd_rainfall_pdfs/
-
+          
+          # Check if there are changes to commit
           if git diff --cached --quiet; then
             echo "No new or changed rainfall files — nothing to commit."
           else
             git commit -m "Add PMD rainfall report(s) for $(date -u +'%Y-%m-%d') [skip ci]"
-            git pull --rebase origin "${GITHUB_REF_NAME}"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
