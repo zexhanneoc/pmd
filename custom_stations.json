@@ -1,0 +1,32 @@
+[
+  {
+    "name": "Mohmand Dam",
+    "lat": 34.35319,
+    "lon": 71.53298
+  },
+  {
+    "name": "Di Khan Airport",
+    "lat": 31.9,
+    "lon": 70.88
+  },
+  {
+    "name": "Babusar",
+    "lat": 35.14,
+    "lon": 74.05
+  },
+  {
+    "name": "Rajanpur",
+    "lat": 29.10333,
+    "lon": 70.32274
+  },
+  {
+    "name": "Pishin",
+    "lat": 30.58028,
+    "lon": 66.99611
+  },
+  {
+    "name": "Rohri",
+    "lat": 27.67,
+    "lon": 68.9
+  }
+]
