@@ -48,7 +48,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests PyPDF2 beautifulsoup4
+          pip install requests PyPDF2 beautifulsoup4 pdfplumber
 
       - name: Run PMD rainfall downloader
         env:
