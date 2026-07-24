@@ -2,8 +2,8 @@ name: PMD Daily Rainfall Downloader
 
 on:
   schedule:
-    # 9:00 AM Pakistan Time = 4:00 AM UTC (Pakistan is UTC+5)
-    - cron: '0 4 * * *'
+    # 10:00 AM Pakistan Time = 5:00 AM UTC (Pakistan is UTC+5)
+    - cron: '0 5 * * *'
     # 11:00 AM Pakistan Time = 6:00 AM UTC
     - cron: '0 6 * * *'
   workflow_dispatch:
