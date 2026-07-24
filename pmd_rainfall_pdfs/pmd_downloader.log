@@ -51,3 +51,13 @@
 2026-07-23 10:02:02,770 [INFO] No valid report found for 2026-07-23.
 2026-07-23 10:02:02,770 [INFO] Run complete. Downloaded: 0, Skipped: 0, Failed: 0
 >>>>>>> dc4625a2c643d47701154b5eeb6d1c30c3938079
+2026-07-24 05:23:13,910 [WARNING] Could not fetch listing page (https://weather.gov.pk/nwfc/daily-rainfall): 403 Client Error: Forbidden for url: https://weather.gov.pk/nwfc/daily-rainfall
+2026-07-24 05:23:13,910 [INFO] No listing link for 2026-07-24, probing fallback: https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/24-07-2026.pdf
+2026-07-24 05:23:13,922 [WARNING] Unexpected status 403 verifying https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/24-07-2026.pdf
+2026-07-24 05:23:13,923 [INFO] No valid report found for 2026-07-24.
+2026-07-24 05:23:13,923 [INFO] Run complete. Downloaded: 0, Skipped: 0, Failed: 0
+2026-07-24 05:23:13,924 [INFO] Found 45 PDF files to process
+2026-07-24 05:23:13,924 [INFO] Parsing 2026-06-18.pdf...
+2026-07-24 05:23:14,130 [INFO] ✓ Parsed 2026-06-18.pdf: 29 station reading(s)
+2026-07-24 05:23:14,131 [INFO] Parsing 2026-07-04.pdf...
+2026-07-24 05:23:14,218 [ERROR] ✗ Failed to parse 2026-07-04.pdf: UNIQUE constraint failed: readings.date, readings.station
