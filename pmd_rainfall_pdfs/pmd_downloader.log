@@ -61,3 +61,16 @@
 2026-07-24 05:23:14,130 [INFO] ✓ Parsed 2026-06-18.pdf: 29 station reading(s)
 2026-07-24 05:23:14,131 [INFO] Parsing 2026-07-04.pdf...
 2026-07-24 05:23:14,218 [ERROR] ✗ Failed to parse 2026-07-04.pdf: UNIQUE constraint failed: readings.date, readings.station
+2026-07-24 12:31:50,902 [INFO] Found 6 PDF link(s) on listing page.
+2026-07-24 12:31:51,308 [INFO] Downloaded: 2026-07-24.pdf  <-  https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/24-July-2026.pdf
+2026-07-24 12:31:51,449 [INFO] Skipped (already exists): 2026-07-23.pdf
+2026-07-24 12:31:51,917 [INFO] Skipped (already exists): 2026-07-22.pdf
+2026-07-24 12:31:52,370 [INFO] Skipped (already exists): 2026-07-21.pdf
+2026-07-24 12:31:52,511 [INFO] Skipped (already exists): 2026-07-20.pdf
+2026-07-24 12:31:52,951 [INFO] Skipped (already exists): 2026-07-19.pdf
+2026-07-24 12:31:52,951 [INFO] No listing link for 2026-07-24, probing fallback: https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/24-07-2026.pdf
+2026-07-24 12:31:53,683 [INFO] No valid report found for 2026-07-24.
+2026-07-24 12:31:53,683 [INFO] No listing link for 2026-07-18, probing fallback: https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/18-07-2026.pdf
+2026-07-24 12:31:54,151 [INFO] Skipped (already exists): 2026-07-18.pdf
+2026-07-24 12:31:54,151 [INFO] Run complete. Downloaded: 1, Skipped: 6, Failed: 0
+2026-07-24 12:31:54,569 [INFO] Found 46 PDF files to process
