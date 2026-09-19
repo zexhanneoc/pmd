@@ -758,3 +758,9 @@
 2026-09-19 09:02:51,201 [INFO] No valid report found for 2026-09-19.
 2026-09-19 09:02:51,201 [INFO] Run complete. Downloaded: 0, Skipped: 0, Failed: 0
 2026-09-19 09:02:51,202 [INFO] Found 46 PDF files to process
+2026-09-19 09:50:05,394 [WARNING] Could not fetch listing page (https://weather.gov.pk/nwfc/daily-rainfall): 403 Client Error: Forbidden for url: https://weather.gov.pk/nwfc/daily-rainfall
+2026-09-19 09:50:05,394 [INFO] No listing link for 2026-09-19, probing fallback: https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/19-09-2026.pdf
+2026-09-19 09:50:05,435 [WARNING] Unexpected status 403 verifying https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/19-09-2026.pdf
+2026-09-19 09:50:05,436 [INFO] No valid report found for 2026-09-19.
+2026-09-19 09:50:05,436 [INFO] Run complete. Downloaded: 0, Skipped: 0, Failed: 0
+2026-09-19 09:50:05,437 [INFO] Found 46 PDF files to process
