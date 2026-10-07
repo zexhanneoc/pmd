@@ -968,3 +968,27 @@
 2026-10-06 12:18:45,736 [INFO] No valid report found for 2026-10-06.
 2026-10-06 12:18:45,737 [INFO] Run complete. Downloaded: 0, Skipped: 0, Failed: 0
 2026-10-06 12:18:45,737 [INFO] Found 46 PDF files to process
+2026-10-07 11:24:28,711 [INFO] Found 7 PDF link(s) on listing page.
+2026-10-07 11:24:30,357 [INFO] Downloaded: 2026-10-07.pdf  <-  https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/07-10-2026.pdf
+2026-10-07 11:24:32,081 [INFO] Downloaded: 2026-10-06.pdf  <-  https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/06-10-2026.pdf
+2026-10-07 11:24:33,816 [INFO] Downloaded: 2026-10-05.pdf  <-  https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/05-10-2026.pdf
+2026-10-07 11:24:34,694 [INFO] Downloaded: 2026-10-03.pdf  <-  https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/03-10-2026.pdf
+2026-10-07 11:24:36,382 [INFO] Downloaded: 2026-10-01.pdf  <-  https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/01-10-2026.pdf
+2026-10-07 11:24:38,053 [INFO] Downloaded: 2026-09-30.pdf  <-  https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/30-09-2026.pdf
+2026-10-07 11:24:39,741 [INFO] Downloaded: 2026-09-29.pdf  <-  https://weather.gov.pk/storage/uploads/nwfc/daily_rainfall/pdf/29-09-2026.pdf
+2026-10-07 11:24:39,741 [INFO] Run complete. Downloaded: 7, Skipped: 0, Failed: 0
+2026-10-07 11:24:39,742 [INFO] Found 53 PDF files to process
+2026-10-07 11:24:39,743 [INFO] Parsing 2026-09-29.pdf...
+2026-10-07 11:24:39,909 [INFO] ✓ Parsed 2026-09-29.pdf: 20 station reading(s), 2 unmatched name(s) saved to unresolved_stations
+2026-10-07 11:24:39,910 [INFO] Parsing 2026-09-30.pdf...
+2026-10-07 11:24:39,944 [INFO] ✓ Parsed 2026-09-30.pdf: 1 station reading(s)
+2026-10-07 11:24:39,944 [INFO] Parsing 2026-10-01.pdf...
+2026-10-07 11:24:39,986 [INFO] ✓ Parsed 2026-10-01.pdf: 0 station reading(s)
+2026-10-07 11:24:39,986 [INFO] Parsing 2026-10-03.pdf...
+2026-10-07 11:24:40,031 [INFO] ✓ Parsed 2026-10-03.pdf: 1 station reading(s)
+2026-10-07 11:24:40,031 [INFO] Parsing 2026-10-05.pdf...
+2026-10-07 11:24:40,063 [INFO] ✓ Parsed 2026-10-05.pdf: 0 station reading(s)
+2026-10-07 11:24:40,063 [INFO] Parsing 2026-10-06.pdf...
+2026-10-07 11:24:40,113 [INFO] ✓ Parsed 2026-10-06.pdf: 12 station reading(s)
+2026-10-07 11:24:40,114 [INFO] Parsing 2026-10-07.pdf...
+2026-10-07 11:24:40,253 [INFO] ✓ Parsed 2026-10-07.pdf: 36 station reading(s)
