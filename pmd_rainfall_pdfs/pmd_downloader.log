@@ -992,3 +992,27 @@
 2026-10-07 11:24:40,113 [INFO] ✓ Parsed 2026-10-06.pdf: 12 station reading(s)
 2026-10-07 11:24:40,114 [INFO] Parsing 2026-10-07.pdf...
 2026-10-07 11:24:40,253 [INFO] ✓ Parsed 2026-10-07.pdf: 36 station reading(s)
+2026-10-07 12:10:21,127 [INFO] Found 7 PDF link(s) on listing page.
+2026-10-07 12:10:22,115 [INFO] Skipped (already exists): 2026-10-07.pdf
+2026-10-07 12:10:23,075 [INFO] Skipped (already exists): 2026-10-06.pdf
+2026-10-07 12:10:23,951 [INFO] Skipped (already exists): 2026-10-05.pdf
+2026-10-07 12:10:24,906 [INFO] Skipped (already exists): 2026-10-03.pdf
+2026-10-07 12:10:25,840 [INFO] Skipped (already exists): 2026-10-01.pdf
+2026-10-07 12:10:26,743 [INFO] Skipped (already exists): 2026-09-30.pdf
+2026-10-07 12:10:27,650 [INFO] Skipped (already exists): 2026-09-29.pdf
+2026-10-07 12:10:27,651 [INFO] Run complete. Downloaded: 0, Skipped: 7, Failed: 0
+2026-10-07 12:10:27,651 [INFO] Found 53 PDF files to process
+2026-10-07 12:10:27,652 [INFO] Parsing 2026-09-29.pdf...
+2026-10-07 12:10:27,725 [INFO] ✓ Parsed 2026-09-29.pdf: 20 station reading(s), 2 unmatched name(s) saved to unresolved_stations
+2026-10-07 12:10:27,725 [INFO] Parsing 2026-09-30.pdf...
+2026-10-07 12:10:27,751 [INFO] ✓ Parsed 2026-09-30.pdf: 1 station reading(s)
+2026-10-07 12:10:27,751 [INFO] Parsing 2026-10-01.pdf...
+2026-10-07 12:10:27,783 [INFO] ✓ Parsed 2026-10-01.pdf: 0 station reading(s)
+2026-10-07 12:10:27,783 [INFO] Parsing 2026-10-03.pdf...
+2026-10-07 12:10:27,808 [INFO] ✓ Parsed 2026-10-03.pdf: 1 station reading(s)
+2026-10-07 12:10:27,808 [INFO] Parsing 2026-10-05.pdf...
+2026-10-07 12:10:27,832 [INFO] ✓ Parsed 2026-10-05.pdf: 0 station reading(s)
+2026-10-07 12:10:27,832 [INFO] Parsing 2026-10-06.pdf...
+2026-10-07 12:10:27,887 [INFO] ✓ Parsed 2026-10-06.pdf: 12 station reading(s)
+2026-10-07 12:10:27,887 [INFO] Parsing 2026-10-07.pdf...
+2026-10-07 12:10:27,981 [INFO] ✓ Parsed 2026-10-07.pdf: 36 station reading(s)
