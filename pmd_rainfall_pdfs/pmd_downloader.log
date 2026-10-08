@@ -1042,3 +1042,29 @@
 2026-10-08 11:40:16,374 [INFO] ✓ Parsed 2026-10-07.pdf: 36 station reading(s)
 2026-10-08 11:40:16,374 [INFO] Parsing 2026-10-08.pdf...
 2026-10-08 11:40:16,434 [INFO] ✓ Parsed 2026-10-08.pdf: 3 station reading(s)
+2026-10-08 12:20:49,497 [INFO] Found 7 PDF link(s) on listing page.
+2026-10-08 12:20:50,486 [INFO] Skipped (already exists): 2026-10-08.pdf
+2026-10-08 12:20:51,731 [INFO] Skipped (already exists): 2026-10-07.pdf
+2026-10-08 12:20:52,786 [INFO] Skipped (already exists): 2026-10-06.pdf
+2026-10-08 12:20:53,662 [INFO] Skipped (already exists): 2026-10-05.pdf
+2026-10-08 12:20:54,589 [INFO] Skipped (already exists): 2026-10-03.pdf
+2026-10-08 12:20:55,540 [INFO] Skipped (already exists): 2026-10-01.pdf
+2026-10-08 12:20:56,446 [INFO] Skipped (already exists): 2026-09-30.pdf
+2026-10-08 12:20:56,446 [INFO] Run complete. Downloaded: 0, Skipped: 7, Failed: 0
+2026-10-08 12:20:56,447 [INFO] Found 54 PDF files to process
+2026-10-08 12:20:56,447 [INFO] Parsing 2026-09-29.pdf...
+2026-10-08 12:20:56,549 [INFO] ✓ Parsed 2026-09-29.pdf: 20 station reading(s), 2 unmatched name(s) saved to unresolved_stations
+2026-10-08 12:20:56,549 [INFO] Parsing 2026-09-30.pdf...
+2026-10-08 12:20:56,577 [INFO] ✓ Parsed 2026-09-30.pdf: 1 station reading(s)
+2026-10-08 12:20:56,578 [INFO] Parsing 2026-10-01.pdf...
+2026-10-08 12:20:56,618 [INFO] ✓ Parsed 2026-10-01.pdf: 0 station reading(s)
+2026-10-08 12:20:56,618 [INFO] Parsing 2026-10-03.pdf...
+2026-10-08 12:20:56,646 [INFO] ✓ Parsed 2026-10-03.pdf: 1 station reading(s)
+2026-10-08 12:20:56,646 [INFO] Parsing 2026-10-05.pdf...
+2026-10-08 12:20:56,673 [INFO] ✓ Parsed 2026-10-05.pdf: 0 station reading(s)
+2026-10-08 12:20:56,673 [INFO] Parsing 2026-10-06.pdf...
+2026-10-08 12:20:56,716 [INFO] ✓ Parsed 2026-10-06.pdf: 12 station reading(s)
+2026-10-08 12:20:56,717 [INFO] Parsing 2026-10-07.pdf...
+2026-10-08 12:20:56,827 [INFO] ✓ Parsed 2026-10-07.pdf: 36 station reading(s)
+2026-10-08 12:20:56,827 [INFO] Parsing 2026-10-08.pdf...
+2026-10-08 12:20:56,862 [INFO] ✓ Parsed 2026-10-08.pdf: 3 station reading(s)
